@@ -1,8 +1,12 @@
+
 document.addEventListener("DOMContentLoaded", () => {
   const activitiesList = document.getElementById("activities-list");
-  const activitySelect = document.getElementById("activity");
+  const signupModal = document.getElementById("signup-modal");
+  const closeModalBtn = document.getElementById("close-modal");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const emailInput = document.getElementById("email");
+  const modalActivityInput = document.getElementById("modal-activity");
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -45,20 +49,23 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="participants-container">
             ${participantsHTML}
           </div>
+          <button class="register-btn" data-activity="${name}">Registrar estudiante</button>
         `;
 
         activitiesList.appendChild(activityCard);
-
-        // Add option to select dropdown
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        activitySelect.appendChild(option);
       });
 
       // Add event listeners to delete buttons
       document.querySelectorAll(".delete-btn").forEach((button) => {
         button.addEventListener("click", handleUnregister);
+      });
+
+      // Add event listeners to register buttons
+      document.querySelectorAll(".register-btn").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          const activity = event.target.getAttribute("data-activity");
+          openSignupModal(activity);
+        });
       });
     } catch (error) {
       activitiesList.innerHTML =
@@ -110,12 +117,34 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Handle form submission
+
+  // Modal logic
+  function openSignupModal(activity) {
+    signupModal.classList.remove("hidden");
+    modalActivityInput.value = activity;
+    emailInput.value = "";
+    messageDiv.classList.add("hidden");
+  }
+
+  function closeSignupModal() {
+    signupModal.classList.add("hidden");
+    signupForm.reset();
+    messageDiv.classList.add("hidden");
+  }
+
+  closeModalBtn.addEventListener("click", closeSignupModal);
+  window.addEventListener("click", (event) => {
+    if (event.target === signupModal) {
+      closeSignupModal();
+    }
+  });
+
+  // Handle form submission (modal)
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById("email").value;
-    const activity = document.getElementById("activity").value;
+    const email = emailInput.value;
+    const activity = modalActivityInput.value;
 
     try {
       const response = await fetch(
@@ -133,9 +162,10 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
-
-        // Refresh activities list to show updated participants
         fetchActivities();
+        setTimeout(() => {
+          closeSignupModal();
+        }, 1200);
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -143,10 +173,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       messageDiv.classList.remove("hidden");
 
-      // Hide message after 5 seconds
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
+      // Hide message after 5 seconds (if not success)
+      if (!response.ok) {
+        setTimeout(() => {
+          messageDiv.classList.add("hidden");
+        }, 5000);
+      }
     } catch (error) {
       messageDiv.textContent = "Failed to sign up. Please try again.";
       messageDiv.className = "error";
